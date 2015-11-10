@@ -5,3 +5,56 @@
 (deftest a-test
   (testing "FIXME, I fail."
     (is (= 0 1))))
+
+
+(defyat create-tables :version "0.0")
+(defyat create-tables :version "1.0")
+
+(defyat define-user)
+
+(clojure.pprint/pprint @tests)
+
+(defyat modify-user
+  :dependencies [["define-user"]])
+
+(defyat create-user :version "1.1"
+  :dependencies [["define-user" "1.0"]
+                 ["create-tables" "1.0" ]
+                 ["modify-user"]]
+  :description "Create a user"
+  :setup
+  (fn [current test-context]
+    (println "Setup for " (description current) " called")
+    test-context)
+  :test (fn [current test-context]
+          ;; (fail)
+          (println "Testing " (fullname current)))
+  :restore (fn [current test-context]
+             (println "Restoring after " (fullname current))))
+
+
+
+(defyat delete-user
+  :dependencies [ ["define-user"]])
+
+#_(reset! tests {})
+
+(defyat A)
+(defyat P)
+
+
+(defyat B
+  :dependencies [["A"]])
+
+(defyat C
+  :dependencies [["B"]
+                 ["A"]
+                 ["P"]])
+
+
+(try
+
+  (run-yats)
+
+  (catch Exception e
+    (.printStackTrace e)))

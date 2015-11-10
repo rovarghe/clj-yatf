@@ -266,7 +266,9 @@
              (reduce (partial attain opts :restore) tests (remove #{caller} parents)))
 
            :restore
-           (throw (ex-info "Shoud not happen" {}))
+           (throw (ex-info "Shoud not happen" {:current current-test
+                                               :goto goto-state
+                                               :caller caller}))
            #_(-> current-test
                (set-child-state caller :restore)
                ((partial assoc tests test-name))))))))
@@ -304,64 +306,34 @@
          (assoc (fullname t) t))))))
 
 
-(defmacro deftest [test-defn]
-  (if (not (name test-defn))
-    (throw (ex-info "Test name missing" test-defn)))
+(defmacro defyat [test-name & test-defn]
 
-  `(swap! tests resolve ~test-defn))
-
+  (if (not= (type test-name) clojure.lang.Symbol)
+    (throw (ex-info "Test name missing" test-name)))
 
 
-(deftest {:name "create-tables"})
+  (let [test-name (clojure.core/name test-name)
+        test-defn (apply hash-map test-defn)
+        test-defn (assoc test-defn :name test-name)]
 
-(deftest {:name "define-user"})
+    `(swap! tests resolve ~test-defn)))
 
-(deftest {:name "modify-user"
-          :dependencies [["define-user"]]})
+(defn run-yats [& opts]
+  (let [opts (apply hash-map opts)
+        all-tests @tests
+        root-names (roots all-tests)]
 
-(deftest {:name "create-user"
-          :version "1.1"
-          :dependencies [["define-user" "1.0"]
-                         ["create-tables" "1.0" ]
-                         ["modify-user"]]
-          :description "Create a user"
-          :setup
-          (fn [current test-context]
-            (println "Setup for " (description current) " called")
-            test-context)
-          :test (fn [current test-context]
-                 ;; (fail)
-                  (println "Testing " (fullname current)))
-          :restore (fn [current test-context]
-                     (println "Restoring after " (fullname current)))})
+    (println "Roots=" root-names)
+
+    (reduce (fn [tests root-name]
+
+              (let [root (tests root-name)]
+                (println "For root=" root-name "state=" (state root))
 
 
 
-(deftest {:name "delete-user"
-          :dependencies [ ["define-user"]]})
-
-(reset! tests {})
-
-(deftest {:name "A"})
-(deftest {:name "P"})
-
-
-(deftest {:name "B"
-          :dependencies [["A"]]})
-
-(deftest {:name "C"
-          :dependencies [["B"]
-                         ["A"]
-                         ["P"]]})
-
-
-(try
-
-  #_(clojure.pprint/pprint
-     (attain :restore @tests "create-tables_1.0"))
-
-  (attain :restore @tests "B_1.0")
-  (println (apply str (repeat 20 "-")))
-
-  (catch Exception e
-    (.printStackTrace e)))
+                ;; Use condp, for built-in assert of invalid state
+                (condp = (state root)
+                      nil (attain opts :restore tests root-name)
+                      :restore tests)))
+            all-tests root-names)))
