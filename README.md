@@ -26,3 +26,9 @@ The only contract is that Teardown (or more appropriately named, Restore) will s
 
 The entire test framework thus acts like a hierarchical state machine, moving from a base state to higher and more complex nested states, each transition taken only when setup and tests successfully complete for that level. When reaching a particular level, it can execute all tests that depend on that level, before exiting or retracing. Each setup is therefore executed only once, each test only executed once and each restore only done once. An environment once created is reused for running as many tests as possible before tearing it down or modifying it. Harnesses become reusable parts of the test module itself.
 
+
+## License
+
+    Copyright (c) Roy Varghese. All rights reserved. 
+    
+    Licensed under the Eclipse Public License 1.0 (Same as Clojure)
