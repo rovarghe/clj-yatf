@@ -32,7 +32,7 @@
   (str (name this) "_" (version this)))
 
 (defn default-stub [step current test-context]
-  (println (clojure.core/name step) " defaulted for " (fullname current))
+  (println "Running " (clojure.core/name step) " for " (fullname current))
   test-context)
 
 (extend-type clojure.lang.IPersistentMap
@@ -96,11 +96,6 @@
 
 (def tests (atom {}))
 
-#_(def ^:dynamic *results* nil)
-
-#_(defn record [results test result]
-  (swap! results assoc test result))
-
 
 (defn fail
   ([] (fail "Without reason" nil))
@@ -109,30 +104,6 @@
      (throw+ {:type ::test-fail
               :fail-text text
               :fail-data data})))
-
-#_(defn run-test [current-test results]
-
-  (println (str "Test:" (name current-test) ":" description))
-  (let [test-context {:current current-test}]
-    (try
-      (let [test-context (setup current-test test-context)]
-        (if (not (map? test-context))
-          (throw
-           (ex-info (str "setup for test '" name "' should return test-context") {})))
-
-        (if (:error test-context)
-          (record results current-test [:skipped {:reason (:error test-context)}])
-          (try
-            (try+
-              (test current-test test-context)
-              (record results current-test [:pass])
-              (catch [:type ::test-fail] ex
-                (record results current-test [:fail (:fail-text ex) (:fail-data ex)])))
-
-
-            (finally
-              (restore current-test test-context))))))))
-
 
 
 (defn roots [tests]
@@ -151,7 +122,8 @@
 
   ([{caller ::caller :as opts} goto-state tests test-name]
 
-     (println "  " caller "->" test-name " state:"(state (tests test-name)) "->" goto-state )
+     #_(println "  " caller "->" test-name
+                " state:" (state (tests test-name)) "->" goto-state )
 
      (let [current-test (tests test-name)
            current-state (state current-test)
@@ -245,11 +217,15 @@
          (condp = current-state
            nil
            ;; Take it to restore state
-           (reduce (fn [t s] (attain opts s t test-name)) tests [:setup :test :test-children :restore])
+           (reduce (fn [t s]
+                     (attain opts s t test-name))
+                   tests [:setup :test :test-children :restore])
 
            :setup
            ;; Take it to restore state
-           (reduce (fn [t s] (attain opts s t test-name)) tests [:test :test-children :restore])
+           (reduce (fn [t s]
+                     (attain opts s t test-name))
+                   tests [:test :test-children :restore])
 
            :test
            (let [tests (-> current-test
@@ -364,25 +340,11 @@
 (deftest {:name "delete-user"
           :dependencies [ ["define-user"]]})
 
-#_(println "ALL TESTS---")
-#_(clojure.pprint/pprint @tests)
-
-#_(defn SETUP [& arg]
-  (println "SETUP on " arg))
-
-#_(defn T [m v]
-  (println "Called for" (first v))
-  (println "Walking up" (first v))
-  ((::walk-up m) m SETUP))
-
-
-
-#_(walk-tests T)
-
 (reset! tests {})
 
 (deftest {:name "A"})
-(deftest {:name "D"})
+(deftest {:name "P"})
+
 
 (deftest {:name "B"
           :dependencies [["A"]]})
@@ -390,10 +352,8 @@
 (deftest {:name "C"
           :dependencies [["B"]
                          ["A"]
-                         ["D"]]})
+                         ["P"]]})
 
-(deftest {:name "DC"
-          :dependencies [["D"]]})
 
 (try
 
