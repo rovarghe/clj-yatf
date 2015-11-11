@@ -52,5 +52,8 @@
 
   (run-yats)
 
+  (is true)
+
   (catch Exception e
-    (.printStackTrace e)))
+    (.printStackTrace e)
+    (fail)))
