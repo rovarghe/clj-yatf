@@ -1,6 +1,7 @@
 (ns clj-yatf.core
   (:gen-class)
-  (:require [slingshot.slingshot :refer [try+ throw+]]))
+  (:require [slingshot.slingshot :refer [try+ throw+]]
+            [clojure.test :as cljt]))
 
 (defprotocol IName
   (name [this]))
@@ -19,14 +20,13 @@
   (level [this])
   (state [this])
   (set-state [this new-state])
+  (status [this])
+  (set-status [this])
   (context [this])
   (set-context [this new-context])
   (child-states [this])
   (child-state [this child-name])
   (set-child-state [this child-name new-state]))
-
-(defprotocol ICycleState
-  (next [this]))
 
 (defn fullname [this]
   (str (name this) "_" (version this)))
@@ -72,6 +72,10 @@
     (or (::level this) 0))
   (set-level [this new-level]
     (assoc this ::level new-level))
+  (status [this]
+    (or (::status this) [:pass]))
+  (set-status [this new-status]
+    (assoc this ::status new-status))
   (context [this]
     (::context this))
   (set-context [this new-context]
@@ -96,7 +100,6 @@
 
 (def tests (atom {}))
 
-
 (defn fail
   ([] (fail "Without reason" nil))
   ([text] (fail text nil))
@@ -105,16 +108,26 @@
               :fail-text text
               :fail-data data})))
 
-
 (defn roots [tests]
   (reduce (fn [s v] (if (::parents (second v)) s (conj s (first v)))) #{} tests))
-
 
 (defn merge-contexts [tests test-names]
   (reduce (fn [c t] (->> t tests context (merge c))) {} test-names))
 
 (defn level-zero? [a-test]
   (= 0 (level a-test)))
+
+(defn- invoke [section a-test context]
+  (try+
+   (condp = section
+     :setup
+     (setup a-test context)
+     :test
+     (test a-test context)
+     :restore
+     (restore a-test context))
+   (catch Exception ex
+     (assoc context :status [:fail (.getCause ex) ex]))))
 
 (defn attain
   ([goto-state tests test-name]
@@ -142,7 +155,7 @@
                  test-context (merge-contexts tests parents)
 
                  ;; Run setup
-                 test-context (setup current-test test-context)]
+                 test-context (invoke :setup current-test test-context)]
 
              ;; Update test-context and return
              (-> current-test
@@ -165,7 +178,7 @@
            :setup
            (let [test-context (context current-test)
                  ;; Run test
-                 test-context (test current-test test-context)]
+                 test-context (invoke :test current-test test-context)]
 
              ;; Update test-context and return
              (-> current-test
@@ -263,7 +276,7 @@
                ;; restore it
 
                (let [test-context (context current-test)
-                     test-context (restore current-test test-context)
+                     test-context (invoke :restore current-test test-context)
 
                      tests
                      (-> current-test
