@@ -122,7 +122,7 @@
 
   ([{caller ::caller :as opts} goto-state tests test-name]
 
-     #_(println "  " caller "->" test-name
+     (println "  " caller "->" test-name
                 " state:" (state (tests test-name)) "->" goto-state )
 
      (let [current-test (tests test-name)
@@ -137,7 +137,8 @@
            ;; To run setup, all parents must have run test
            (let [opts (assoc opts ::caller test-name)
                  ;; Dont call the caller
-                 tests (reduce (partial attain opts :test) tests (remove #{caller} parents))
+                 tests (reduce (partial attain opts :test)
+                               tests (remove #{caller} parents))
                  test-context (merge-contexts tests parents)
 
                  ;; Run setup
@@ -176,6 +177,7 @@
            :test
            (-> current-test
                (set-child-state caller :test)
+               #_((fn [x] (println x) x))
                ((partial assoc tests test-name))))
 
          :test-children
@@ -209,9 +211,14 @@
                                      ((partial assoc c test-name))))))) tests children)
                  current-test (tests test-name)]
 
-             (-> current-test
-                 (set-state :test-children)
-                 ((partial assoc tests test-name)))))
+             ;; Testing children could result in a :restore state
+             (if (= :restore (state current-test))
+               ;; return
+               tests
+               ;; else update and return
+               (-> current-test
+                   (set-state :test-children)
+                   ((partial assoc tests test-name))))))
 
          :restore
          (condp = current-state
@@ -232,7 +239,9 @@
                            (set-child-state caller :restore)
                            ((partial assoc tests test-name)))]
 
-             (reduce (fn [t s] (attain opts s t test-name)) tests [:test-children :restore]))
+             (reduce (fn [t s]
+                       (attain opts s t test-name))
+                     tests [:test-children :restore]))
 
            :test-children
            ;; Only move to restore if all children are in restore state
@@ -245,33 +254,36 @@
 
                  restored-children
                  (reduce (fn [m [c s]] (if (= s :restore) (conj m c) m))
-                         #{} (child-states current-test))
+                         #{} (child-states current-test))]
 
-                 tests
-                 (if (apply not= (map count [restored-children children]))
-                   ;; no-op
-                   tests
-                   ;; restore it
+             (if (apply not= (map count [restored-children children]))
+               ;; no-op
+               tests
 
-                   (let [test-context (context current-test)
-                         test-context (restore current-test test-context)]
+               ;; restore it
 
+               (let [test-context (context current-test)
+                     test-context (restore current-test test-context)
+
+                     tests
                      (-> current-test
                          (set-state :restore)
                          (set-context test-context)
-                         ((partial assoc tests test-name)))))
-                 opts
-                 (assoc opts ::caller test-name)]
+                         ((partial assoc tests test-name)))
 
-             (reduce (partial attain opts :restore) tests (remove #{caller} parents)))
+                     opts
+                     (assoc opts ::caller test-name)]
+
+                 (let [x  (reduce (partial attain opts :restore)
+                                  tests (remove #{caller} parents))]
+                   #_(println test-name "after calling parents " )
+                   #_(clojure.pprint/pprint x)
+                   x))))
 
            :restore
-           (throw (ex-info "Shoud not happen" {:current current-test
-                                               :goto goto-state
-                                               :caller caller}))
-           #_(-> current-test
-               (set-child-state caller :restore)
-               ((partial assoc tests test-name))))))))
+           (-> current-test
+             (set-child-state caller :restore)
+             ((partial assoc tests test-name))))))))
 
 
 (defn resolve [roots test-defn]

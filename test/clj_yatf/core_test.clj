@@ -8,7 +8,7 @@
 
 (defyat define-user)
 
-(clojure.pprint/pprint @tests)
+#_(clojure.pprint/pprint @tests)
 
 (defyat modify-user
   :dependencies [["define-user"]])
@@ -35,14 +35,14 @@
 
 #_(reset! tests {})
 
-(defyat A)
-(defyat P)
+#_(defyat A)
+#_(defyat P)
 
 
-(defyat B
+#_(defyat B
   :dependencies [["A"]])
 
-(defyat C
+#_(defyat C
   :dependencies [["B"]
                  ["A"]
                  ["P"]])
