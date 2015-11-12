@@ -1,7 +1,7 @@
 # clj-yatf
 Yet another testing framework for Clojure. This one focuses on reusability.
 
-## Stop the Rinse and Repeat
+## Stop rinsing and repeating
 
 Most if not all testing involves three distinct steps
 - Setup
@@ -22,7 +22,7 @@ This approach to testing is to raise the Setup and Teardown phases to the same l
 
 The only contract is that Teardown (or more appropriately named, Restore) will set back the state to how the test found it before it exits.
 
-## State machine
+## Nested dependencies
 
 The entire test framework thus acts like a hierarchical state machine, moving from a base state to higher and more complex nested states, each transition taken only when setup and tests successfully complete for that level. When reaching a particular level, it can execute all tests that depend on that level, before exiting or retracing. Each setup is therefore executed only once, each test only executed once and each restore only done once. An environment once created is reused for running as many tests as possible before tearing it down or modifying it. Harnesses become reusable parts of the test module itself. Tests can have multiple dependencies, each dependency establishing a particular state.
 
@@ -31,7 +31,7 @@ The entire test framework thus acts like a hierarchical state machine, moving fr
 
 ### Basic Usage
 
-A test is defined with *defyat*, (for now, till I think of something more clever) the name is necessary, everything else is optional with sensible defaults.
+A test is defined with *defyat*, (for now, till I think of something clever) the name is necessary, everything else is optional with sensible defaults.
 
 ```
 (defyat define-user)
