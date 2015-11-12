@@ -48,12 +48,21 @@
                  ["P"]])
 
 
-(try
+(deftest yats-test
+  ;; TBD
+  (try
 
-  (run-yats)
+    (run-yats)
 
-  (is true)
+    (is true)
 
-  (catch Exception e
-    (.printStackTrace e)
-    (fail)))
+    (run-yat "delete-user" "1.0")
+
+    (is true)
+
+    (catch Exception e
+      (.printStackTrace e)
+      (fail))))
+
+
+(run-tests)

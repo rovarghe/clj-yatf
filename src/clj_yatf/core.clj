@@ -343,22 +343,31 @@
 
     `(swap! tests resolve ~test-defn)))
 
+(defn run-yats* [opts all-tests test-names]
+
+  (reduce (fn [tests root-name]
+
+            (let [root (tests root-name)]
+              (println "For root=" root-name "state=" (state root))
+
+
+
+              ;; Use condp, for built-in assert of invalid state
+              (condp = (state root)
+                nil (attain opts :restore tests root-name)
+                :restore tests)))
+          all-tests test-names))
+
 (defn run-yats [& opts]
   (let [opts (apply hash-map opts)
         all-tests @tests
         root-names (roots all-tests)]
 
-    (println "Roots=" root-names)
-
-    (reduce (fn [tests root-name]
-
-              (let [root (tests root-name)]
-                (println "For root=" root-name "state=" (state root))
+    (run-yats* opts all-tests root-names)))
 
 
+(defn run-yat [test-name version & opts]
+  (let [opts (apply hash-map opts)
+        test-name (fullname [test-name version])]
 
-                ;; Use condp, for built-in assert of invalid state
-                (condp = (state root)
-                      nil (attain opts :restore tests root-name)
-                      :restore tests)))
-            all-tests root-names)))
+    (run-yats* opts @tests [test-name])))
